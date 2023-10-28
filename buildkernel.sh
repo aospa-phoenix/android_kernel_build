@@ -66,9 +66,19 @@ make_defconfig()
  		echo "======================="
         	echo "Merging fragment configs"
         	set -x
-		(cd ${KERNEL_DIR} && \
-		${MAKE_PATH}make O=${OUT_DIR} ${MAKE_ARGS} HOSTCFLAGS="${TARGET_INCLUDES}" HOSTLDFLAGS="${TARGET_LINCLUDES}" ARCH=${ARCH} ${real_cc} ${KERNEL_SCRIPTS}/kconfig/merge_config.sh "${DEFCONFIG}" "${FRAGMENT_CONFIG}")
-		set +x
+	        # Save the initial DEFCONFIG
+        	CURRENT_CONFIG="${DEFCONFIG}"
+
+	        # Split the FRAGMENT_CONFIG variable into an array of configs
+        	IFS=' ' read -ra CONFIG_ARRAY <<< "${FRAGMENT_CONFIG}"
+
+        	for CONFIG in "${CONFIG_ARRAY[@]}"; do
+                	(cd ${KERNEL_DIR} && \
+                	${MAKE_PATH}make O=${OUT_DIR} ${MAKE_ARGS} HOSTCFLAGS="${TARGET_INCLUDES}" HOSTLDFLAGS="${TARGET_LINCLUDES}" ARCH=${ARCH} ${real_cc} ${KERNEL_SCRIPTS}/kconfig/merge_config.sh "${CURRENT_CONFIG}" "${CONFIG}")
+                	# After merging, the output becomes the current config for the next merge
+                	CURRENT_CONFIG="${OUT_DIR}/.config"
+        	done
+        	set +x
 	fi
 }
 
